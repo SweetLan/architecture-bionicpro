@@ -17,12 +17,18 @@ const ReportPage: React.FC = () => {
       setError(null);
 
       const response = await fetch(`${process.env.REACT_APP_API_URL}/reports`, {
+        method: 'GET',
         headers: {
-          'Authorization': `Bearer ${keycloak.token}`
-        }
+          'X-User-Id': 'user-1',
+        },
       });
 
-      
+      if (!response.ok) {
+        throw new Error('Failed to load report');
+      }
+
+      const data = await response.json();
+      alert(JSON.stringify(data, null, 2));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -51,7 +57,7 @@ const ReportPage: React.FC = () => {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="p-8 bg-white rounded-lg shadow-md">
         <h1 className="text-2xl font-bold mb-6">Usage Reports</h1>
-        
+
         <button
           onClick={downloadReport}
           disabled={loading}
