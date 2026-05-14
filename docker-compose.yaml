@@ -92,7 +92,14 @@ services:
     volumes:
       - ./Task2/airflow/dags:/opt/airflow/dags
     command: scheduler
-
+  reports-api:
+    build:
+      context: ./Task3/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - clickhouse
   airflow-init:
     image: apache/airflow:2.9.1-python3.9
     depends_on:
@@ -111,3 +118,4 @@ services:
       --role Admin
       --email admin@example.com
       "
+
