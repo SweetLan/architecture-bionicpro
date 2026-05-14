@@ -40,3 +40,74 @@ services:
       REACT_APP_KEYCLOAK_URL: http://localhost:8080
       REACT_APP_KEYCLOAK_REALM: reports-realm
       REACT_APP_KEYCLOAK_CLIENT_ID: reports-frontend
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3
+    environment:
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: ""
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+
+  airflow-postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5434:5432"
+
+  airflow-webserver:
+    image: apache/airflow:2.9.1-python3.9
+    depends_on:
+      airflow-postgres:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      _PIP_ADDITIONAL_REQUIREMENTS: "clickhouse-driver psycopg2-binary"
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./Task2/airflow/dags:/opt/airflow/dags
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.9.1-python3.9
+    depends_on:
+      airflow-postgres:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: SequentialExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      _PIP_ADDITIONAL_REQUIREMENTS: "clickhouse-driver psycopg2-binary"
+    volumes:
+      - ./Task2/airflow/dags:/opt/airflow/dags
+    command: scheduler
+
+  airflow-init:
+    image: apache/airflow:2.9.1-python3.9
+    depends_on:
+      - airflow-postgres
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+      _PIP_ADDITIONAL_REQUIREMENTS: "clickhouse-driver psycopg2-binary"
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create
+      --username admin
+      --password admin
+      --firstname admin
+      --lastname admin
+      --role Admin
+      --email admin@example.com
+      "
