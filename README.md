@@ -1,4 +1,39 @@
-# BionicPRO Reports Platform
+# Задание 1. Повышение безопасности системы
+
+# Задача 1.1. Управление учетными данными пользователя
+
+## Решение
+
+В архитектуру BionicPRO добавлен IAM/SSO слой на базе Keycloak.
+
+Keycloak используется как единая точка входа и federation broker для внешних удостоверяющих служб разных стран. Учетные записи пользователей запрашиваются из внешних IdP/LDAP/AD, расположенных в стране представительства компании. 
+Медицинские и персональные данные пользователей продолжают храниться локально в региональных хранилищах BionicPRO и не переносятся в Keycloak.
+
+Для защиты токенов добавлен Session API. 
+Фронтенд не получает access_token и refresh_token от внешнего IdP. После входа пользователя Keycloak выпускает внутренние токены BionicPRO, а BFF хранит их на серверной стороне. Фронтенду возвращается только защищённая HttpOnly Secure SameSite cookie.
+
+Для frontend-клиента используется OAuth 2.0 Authorization Code Flow with PKCE. Implicit Flow и Direct Access Grants отключены. PKCE защищает систему от атаки с перехватом authorization code.
+
+Доступ к отчётам ограничивается на уровне API: пользователь может получить только отчеты, связанные с его user_id и prosthesis_id.
+
+[Архитектура решения](Task1.1&1.2/BionicPRO_C4_model.drawio.xml)
+
+## Задача 1.2. Замена Code Grant на PKCE
+
+Для frontend-клиента `reports-frontend` включён Authorization Code Flow with PKCE.
+
+Изменения:
+- клиент остался публичным: `publicClient: true`;
+- включен стандартный Authorization Code Flow: `standardFlowEnabled: true`;
+- отключен Implicit Flow: `implicitFlowEnabled: false`;
+- отключен Direct Access Grants: `directAccessGrantsEnabled: false`;
+- включен PKCE с методом S256: `pkce.code.challenge.method: S256`;
+- во фронтенде Keycloak adapter настроен с `pkceMethod: 'S256'`.
+
+PKCE повышает безопасность, потому что перехваченный authorization code нельзя обменять на токены без `code_verifier`.
+
+
+# Задание 2. Разработка сервиса отчётов
 
 ## Описание проекта
 
@@ -13,7 +48,7 @@
 
 ---
 
-# Задача 1. Архитектура решения
+# Задача 2.1. Архитектура решения
 
 Подготовлена архитектура системы подготовки отчетов.
 
@@ -33,11 +68,11 @@ ETL-процесс:
 4. Формирует витрину `prosthesis_report_mart`.
 5. Backend API предоставляет готовые отчёты без realtime-вычислений.
 
-Архитектурная схема подготовлена [в draw.io](Task2/BionicPRO_C4_model.drawio.xml)
+Архитектурная схема подготовлена [в draw.io](Task2.1&2.2/BionicPRO_C4_model.drawio.xml)
 
 ---
 
-# Задача 2. Airflow DAG и ETL
+# Задача 2.2. Airflow DAG и ETL
 
 Реализован DAG:
 - `prosthesis_reports_etl`
@@ -63,14 +98,14 @@ DAG выполняет:
 Настроено расписание запуска DAG.
 
 Витрина оптимизирована для быстрого доступа по `user_id`.
-Ссылка на [airflow](Task2/airflow/dags/prosthesis_reports_dag.py)
+Ссылка на [airflow](Task2.1&2.2/airflow/dags/prosthesis_reports_dag.py)
 Скриншоты 
-[Screenshot1](Task2/airflow/Screenshot1.png)
-[Screenshot2](Task2/airflow/Screenshot2.png)
-[Архитектура](Task2/BionicPRO_C4_model.drawio.xml)
+[Screenshot1](Task2.1&2.2/airflow/Screenshot1.png)
+[Screenshot2](Task2.1&2.2/airflow/Screenshot2.png)
+[Архитектура](Task2.1&2.2/BionicPRO_C4_model.drawio.xml)
 ---
 
-# Задача 3. Backend API
+# Задача 2.3. Backend API
 
 Реализован backend-сервис на FastAPI.
 
@@ -90,11 +125,11 @@ API:
 ```bash
 curl.exe -H "X-User-Id: user-1" http://localhost:8000/reports
 ```
-[Ссылка на backend](Task3/backend/)
-[Скриншот](Task3/Screenshot1.png)
+[Ссылка на backend](Task2.3/backend/)
+[Скриншот](Task2.3/Screenshot1.png)
 ---
 
-# Задача 4. Ограничение доступа
+# Задача 2.4. Ограничение доступа
 
 Реализовано ограничение доступа к отчетам.
 
@@ -109,10 +144,10 @@ Backend:
 ```text
 422 Unprocessable Entity
 ```
-[Скриншот](Task4/Screenshot1.png)
+[Скриншот](Task2.4/Screenshot1.png)
 ---
 
-# Задача 5. UI для получения отчётов
+# Задача 2.5. UI для получения отчётов
 
 Во frontend реализована кнопка:
 - `Download Report`
@@ -134,7 +169,7 @@ Frontend:
 - Keycloak
 - PostgreSQL
 
-[Скриншот](Task5/Screenshot.png)
+[Скриншот](Task2.5/Screenshot.png)
 ---
 
 # Проверка работы
